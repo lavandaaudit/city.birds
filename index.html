@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ibonarium UA | Ukraine Bird Radar Pro</title>
+    <!-- SEO -->
+    <meta name="description"
+        content="Науковий моніторинг орнітофауни України в реальному часі. Агрегація даних iNaturalist, GBIF та Bird Radar.">
+    <!-- Google Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root {
+            --bg: #050608;
+            --panel: rgba(10, 12, 16, 0.95);
+            --border: rgba(255, 255, 255, 0.1);
+            --c-birds: #ff9800;
+            --c-inat: #74ac00;
+            --c-red: #ef4444;
+            --text: #f0f6fc;
+            --text-dim: #8b949e;
+            --accent: #58a6ff;
+            --glass: blur(40px);
+            --sidebar-w: 360px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        header {
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            background: rgba(5, 6, 8, 0.98);
+            backdrop-filter: var(--glass);
+            border-bottom: 1px solid var(--border);
+            z-index: 2100;
+            flex-shrink: 0;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-box {
+            width: 32px;
+            height: 32px;
+            border: 1px solid var(--c-birds);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 152, 0, 0.1);
+        }
+
+        .logo-main {
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-sub {
+            font-size: 0.6rem;
+            color: var(--c-birds);
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .time-box {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            background: rgba(255, 255, 255, 0.03);
+            padding: 4px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #map {
+            flex: 1;
+            z-index: 1;
+            background: #000;
+        }
+
+        /* UI Overlays */
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+        }
+
+        .side-col {
+            width: var(--sidebar-w);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            pointer-events: auto;
+            /* Enable interaction for scrolling */
+            position: relative;
+            overflow-y: auto;
+            padding-bottom: 20px;
+            /* Space at the bottom */
+        }
+
+        .side-col::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .side-col::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 10px;
+        }
+
+        .side-col>* {
+            pointer-events: auto;
+            flex-shrink: 0;
+            /* Prevent widgets from collapsing */
+        }
+
+        .glass {
+            background: var(--panel);
+            backdrop-filter: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 18px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        .title {
+            font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-dim);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        /* Live Feed (Left) */
+        #feed {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding-right: 5px;
+        }
+
+        #feed::-webkit-scrollbar {
+            width: 2px;
+        }
+
+        #feed::-webkit-scrollbar-thumb {
+            background: var(--border);
+        }
+
+        .card {
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .card:hover {
+            border-color: var(--accent);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .card-img {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 1px solid var(--border);
+        }
+
+        .card-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .card-name {
+            font-size: 0.85rem;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-meta {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Stats (Right) */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        .stat-val {
+            font-size: 1.3rem;
+            font-weight: 700;
+            display: block;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stat-lab {
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+
+        .a-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            margin-bottom: 4px;
+        }
+
+        .a-bar {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 2px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+
+        .a-fill {
+            height: 100%;
+            transition: 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Controls */
+        .controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2000;
+            display: flex;
+            gap: 6px;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            padding: 8px;
+            border-radius: 16px;
+            backdrop-filter: var(--glass);
+            pointer-events: auto;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.8);
+        }
+
+        .btn {
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            padding: 8px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 700;
+            transition: 0.3s;
+        }
+
+        .btn.active {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn.active[data-time="24h"] {
+            background: var(--c-birds);
+        }
+
+        .btn.active[data-time="7d"] {
+            background: var(--c-birds);
+        }
+
+        .btn.active[data-time="3m"] {
+            background: var(--c-birds);
+        }
+
+        /* Deep Dive Overlay */
+        #deep-dive {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--panel);
+            backdrop-filter: var(--glass);
+            border-radius: 18px;
+            border: 1px solid var(--border);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            padding: 25px;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateX(20px);
+            transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        #deep-dive.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(0);
+        }
+
+        .close-dive {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            cursor: pointer;
+            color: var(--text-dim);
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .dive-img {
+            width: 100%;
+            height: 200px;
+            border-radius: 14px;
+            object-fit: cover;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .dive-name {
+            font-size: 1.4rem;
+            font-weight: 800;
+            margin-bottom: 5px;
+        }
+
+        .dive-sci {
+            font-size: 0.9rem;
+            font-style: italic;
+            color: var(--text-dim);
+            margin-bottom: 20px;
+        }
+
+        .dive-text {
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: var(--text-dim);
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .dive-text::-webkit-scrollbar {
+            width: 2px;
+        }
+
+        .dive-text::-webkit-scrollbar-thumb {
+            background: var(--border);
+        }
+
+        .badge {
+            font-size: 0.65rem;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 5px;
+            text-transform: uppercase;
+            margin-right: 5px;
+        }
+
+        .badge-red {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--c-red);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .badge-trans {
+            background: rgba(88, 166, 255, 0.2);
+            color: var(--accent);
+            border: 1px solid rgba(88, 166, 255, 0.2);
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 900px) {
+            body {
+                overflow-x: hidden;
+                overflow-y: auto;
+                height: auto;
+                display: block;
+            }
+
+            header {
+                position: sticky;
+                top: 0;
+                padding: 0 15px;
+                height: 55px;
+            }
+
+            main {
+                display: block;
+                height: auto;
+                overflow: visible;
+            }
+
+            #map {
+                height: 45vh;
+                width: 100vw;
+                position: sticky;
+                top: 55px;
+                z-index: 500;
+            }
+
+            .ui-layer {
+                position: relative;
+                flex-direction: column;
+                height: auto;
+                padding: 10px;
+                gap: 12px;
+                z-index: 600;
+                pointer-events: auto;
+                background: var(--bg);
+            }
+
+            .side-col {
+                width: 100%;
+                height: auto;
+                pointer-events: auto;
+            }
+
+            .glass {
+                padding: 15px;
+                border-radius: 20px;
+            }
+
+            .controls {
+                position: fixed;
+                bottom: 20px;
+                left: 15px;
+                right: 15px;
+                transform: none;
+                width: calc(100% - 30px);
+                overflow-x: auto;
+                justify-content: space-around;
+                padding: 6px;
+                border-radius: 20px;
+                z-index: 3000;
+            }
+
+            #deep-dive {
+                position: fixed;
+                top: auto;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                width: 100%;
+                height: 85vh;
+                border-radius: 30px 30px 0 0;
+                transform: translateY(100%);
+                z-index: 4000;
+                padding: 30px 20px;
+            }
+
+            #deep-dive.active {
+                transform: translateY(0);
+            }
+        }
+
+        .tag {
+            font-size: 0.6rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-dim);
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="logo">
+            <div class="logo-box">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff9800" stroke-width="3">
+                    <path d="M12 2C7.03 2 3 6.03 3 11c0 3.31 2.69 6 6 6s6-2.69 6-6c0-4.97-4.03-9-9-9z" />
+                    <path d="M18 10l4 2-4 2" />
+                </svg>
+            </div>
+            <div class="logo-txt">
+                <span class="logo-main">Ibonarium UA</span>
+                <span class="logo-sub">ukraine.bird.radar</span>
+            </div>
+        </div>
+        <div class="time-box" id="time">00:00:00</div>
+    </header>
+
+    <main>
+        <div id="map"></div>
+
+        <div class="ui-layer">
+            <div class="side-col">
+                <div class="glass" style="flex:1; display:flex; flex-direction:column; min-height:450px;">
+                    <div class="title">Активність птахів України (Live)</div>
+                    <div id="feed"></div>
+                </div>
+            </div>
+
+            <div class="side-col right-stack">
+                <div id="analytics-view" style="display:contents;">
+                    <div class="glass">
+                        <div class="title">Science Metrics (UA)</div>
+                        <div class="stat-grid">
+                            <div class="stat-box">
+                                <span class="stat-val" id="c-total">0</span>
+                                <span class="stat-lab">Знахідок</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-val" id="c-shannon">0.00</span>
+                                <span class="stat-lab">Біо-ініціал</span>
+                            </div>
+                        </div>
+                        <div class="title">Популяційний Пульс</div>
+                        <div id="geo-labels" class="a-row" style="font-size: 0.65rem;"><span>Північ:
+                                0%</span><span>Південь: 0%</span></div>
+                        <div class="a-bar" style="display:flex;">
+                            <div id="geo-n" style="height:100%; background:var(--c-birds);"></div>
+                            <div id="geo-s" style="height:100%; background:var(--accent);"></div>
+                        </div>
+                    </div>
+
+                    <div class="glass" style="flex:1;">
+                        <div class="title">Топ видів у вибірці</div>
+                        <div id="stat-sp"></div>
+                        <div class="title" style="margin-top:15px;">Статус охорони (IUCN)</div>
+                        <div id="stat-iucn"></div>
+                    </div>
+
+                    <div class="glass">
+                        <div class="title">Орнітологічна Складова (Ряди)</div>
+                        <div id="stat-taxa"
+                            style="font-size: 0.7rem; color: var(--text-dim); display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        </div>
+                        <div class="title" style="margin-top:15px;">Джерела Даних</div>
+                        <div id="stat-src"></div>
+                    </div>
+
+                    <div class="glass">
+                        <div class="title">Real-Time UA Sync</div>
+                        <div style="font-size:0.7rem; color:var(--text-dim); line-height:1.5;">
+                            Моніторинг: <b>Aves (Birds) only</b>. Регіон: <b>Україна</b>.
+                            Агрегація: <b>iNat UA + GBIF Node</b>.
+                            <p style="margin-top:5px; font-size:0.6rem;">Автоматичне відстеження рідкісних видів за
+                                каталогом <b>IUCN Red List</b>.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="deep-dive">
+                    <div class="close-dive" onclick="closeDive()">✕ Назад</div>
+                    <img id="dive-img" class="dive-img" src="" alt="">
+                    <h2 id="dive-name" class="dive-name">Species Name</h2>
+                    <div id="dive-sci" class="dive-sci">Scientific Name</div>
+                    <div id="dive-badges" style="margin-bottom:15px;"></div>
+                    <div id="dive-text" class="dive-text">Синхронізація з орнітологічною базою...</div>
+                    <div id="dive-audio-box" style="margin-top:20px; display:none;">
+                        <div class="title" style="font-size:0.55rem;">Голос птаха (Xeno-Canto)</div>
+                        <audio id="dive-audio" controls style="width:100%; height:30px;"></audio>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn active" data-time="1m">1 МІСЯЦЬ</button>
+            <button class="btn" data-time="3m">3 МІСЯЦІ</button>
+            <button class="btn" data-time="6m">6 МІСЯЦІВ</button>
+            <button class="btn" data-time="12m">12 МІСЯЦІВ</button>
+        </div>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const state = {
+            map: null,
+            data: [],
+            markers: [],
+            timePeriod: '1m',
+            stats: { speciesList: [], sources: {}, iucn: {} }
+        };
+
+        const TAXA_COLORS = {
+            'LC': '#58a6ff', // Least Concern - Blue
+            'NT': '#a855f7', // Near Threatened - Purple
+            'VU': '#ff9800', // Vulnerable - Orange
+            'EN': '#ef4444', // Endangered - Red
+            'CR': '#b91c1c', // Critically Endangered - Dark Red
+            'Normal': '#ff9800' // Default Bird Color
+        };
+
+        function init() {
+            state.map = L.map('map', { zoomControl: false, attributionControl: false }).setView([48.3794, 31.1656], 6);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(state.map);
+
+            const southWest = L.latLng(44.0, 22.0),
+                northEast = L.latLng(53.0, 41.0);
+            const bounds = L.latLngBounds(southWest, northEast);
+            state.map.setMaxBounds(bounds);
+
+            refresh();
+            setInterval(refresh, 600000); // 10 min refresh
+            setInterval(() => { document.getElementById('time').innerText = new Date().toLocaleTimeString('uk-UA'); }, 1000);
+
+            document.querySelectorAll('.btn').forEach(b => {
+                b.onclick = () => {
+                    document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
+                    b.classList.add('active');
+                    state.timePeriod = b.dataset.time;
+                    refresh();
+                };
+            });
+        }
+
+        async function refresh() {
+            const feed = document.getElementById('feed');
+            feed.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-dim); font-size:0.8rem;">Сканування повітряного простору України...</div>';
+
+            try {
+                const now = new Date();
+                let d1;
+                if (state.timePeriod === '1m') d1 = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+                else if (state.timePeriod === '3m') d1 = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+                else if (state.timePeriod === '6m') d1 = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
+                else if (state.timePeriod === '12m') d1 = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+                else d1 = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+
+                const d1Iso = d1.toISOString().split('T')[0];
+                const nowIso = now.toISOString().split('T')[0];
+
+                // Increase limits to show difference between 1m and 12m
+                // iNat: max 200 per page. For 6m/12m we fetch 2 pages.
+                const perPage = (state.timePeriod === '6m' || state.timePeriod === '12m') ? 200 : 200;
+                const inatUrlP1 = `https://api.inaturalist.org/v1/observations?taxon_id=3&place_id=7015&d1=${d1Iso}&per_page=${perPage}&order=desc&order_by=created_at&quality_grade=research,needs_id`;
+                const inatUrlP2 = `https://api.inaturalist.org/v1/observations?taxon_id=3&place_id=7015&d1=${d1Iso}&per_page=${perPage}&page=2&order=desc&order_by=created_at&quality_grade=research,needs_id`;
+
+                // GBIF: limit up to 1000 for better density
+                const gbifLimit = (state.timePeriod === '1m') ? 400 : 1000;
+                const gbifUrl = `https://api.gbif.org/v1/occurrence/search?taxonKey=212&country=UA&eventDate=${d1Iso},${nowIso}&limit=${gbifLimit}`;
+
+                const requests = [
+                    fetch(inatUrlP1).then(r => r.json()),
+                    fetch(gbifUrl).then(r => r.json())
+                ];
+
+                // Add second page for long periods
+                if (state.timePeriod === '6m' || state.timePeriod === '12m') {
+                    requests.push(fetch(inatUrlP2).then(r => r.json()));
+                }
+
+                const results = await Promise.all(requests);
+                const r1 = results[0];
+                const rGBIF = results[1];
+                const r1P2 = results[2] || { results: [] };
+
+                const processInat = (res) => (res.results || []).map(o => ({
+                    id: 'inat-' + o.id,
+                    name: o.taxon ? (o.taxon.preferred_common_name || o.taxon.name) : 'Невідомий птах',
+                    sci: o.taxon ? o.taxon.name : '',
+                    rank: o.taxon ? o.taxon.rank : '',
+                    order: o.taxon && o.taxon.ancestor_ids ? o.taxon.iconic_taxon_name : 'Aves',
+                    lat: o.location ? parseFloat(o.location.split(',')[0]) : 0,
+                    lng: o.location ? parseFloat(o.location.split(',')[1]) : 0,
+                    img: (o.photos && o.photos[0]) ? o.photos[0].url.replace('square', 'medium') : 'https://via.placeholder.com/150/111/fff?text=iNat',
+                    loc: o.place_guess || 'Україна',
+                    src: 'iNaturalist',
+                    iucn: o.taxon && o.taxon.conservation_status ? o.taxon.conservation_status.status : 'LC'
+                }));
+
+                const inatD1 = processInat(r1);
+                const inatD2 = processInat(r1P2);
+
+                const gbif = (rGBIF.results || []).map(o => ({
+                    id: 'gbif-' + o.key,
+                    name: o.vernacularName || o.species || 'Птах UA',
+                    sci: o.species || '',
+                    order: o.order || 'Passeriformes',
+                    lat: o.decimalLatitude || 0,
+                    lng: o.decimalLongitude || 0,
+                    img: (o.media && o.media[0]) ? o.media[0].identifier : 'https://via.placeholder.com/150/111/fff?text=GBIF',
+                    loc: o.stateProvince || o.locality || 'Український Вузол',
+                    src: 'GBIF Node',
+                    iucn: 'LC'
+                }));
+
+                const merged = [...inatD1, ...inatD2, ...gbif].filter(o => o.lat !== 0 && o.lat > 44 && o.lat < 53 && o.lng > 22 && o.lng < 41);
+
+                // Smarter deduplication: if multiple sightings of SAME species in EXACT same spot, merge them
+                state.data = Array.from(new Map(merged.map(o => [`${o.lat.toFixed(4)},${o.lng.toFixed(4)},${o.sci}`, o])).values());
+
+                // Sort by date equivalent (newest first for the feed)
+                draw();
+            } catch (e) {
+                console.error("API Error", e);
+                feed.innerHTML = '<div style="padding:20px; color:var(--c-red);">Помилка синхронізації. Перевірте з’єднання.</div>';
+            }
+        }
+
+        function draw() {
+            const feed = document.getElementById('feed');
+            state.markers.forEach(m => state.map.removeLayer(m));
+            state.markers = [];
+            feed.innerHTML = '';
+
+            if (state.data.length === 0) {
+                feed.innerHTML = '<div style="padding:20px; color:var(--text-dim);">Даних за цей період не знайдено.</div>';
+                return;
+            }
+
+            document.getElementById('c-total').innerText = state.data.length;
+
+            state.data.forEach(d => {
+                const color = TAXA_COLORS[d.iucn] || TAXA_COLORS.Normal;
+                const isRare = ['VU', 'EN', 'CR'].includes(d.iucn);
+
+                const m = L.circleMarker([d.lat, d.lng], {
+                    radius: isRare ? 12 : 8,
+                    fillColor: color,
+                    color: '#fff',
+                    weight: isRare ? 2.5 : 1.5,
+                    fillOpacity: 0.85
+                }).addTo(state.map);
+
+                m.on('click', () => {
+                    state.map.flyTo([d.lat, d.lng], 11);
+                    openDive(d);
+                });
+                state.markers.push(m);
+
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div style="position:relative;">
+                        <img src="${d.img}" class="card-img" onerror="this.src='https://via.placeholder.com/50/111/fff?text=BIO'">
+                        ${isRare ? '<div style="position:absolute; top:-5px; right:-5px; width:10px; height:10px; background:var(--c-red); border-radius:50%; border:2px solid var(--bg);"></div>' : ''}
+                    </div>
+                    <div class="card-info">
+                        <div class="card-name">${d.name}</div>
+                        <div class="card-meta">
+                            <span style="color:${color}">●</span> ${d.loc} 
+                            <span class="tag" style="background:rgba(255,255,255,0.05)">${d.src}</span>
+                            ${d.iucn !== 'LC' ? `<span class="tag" style="color:${color}; border-color:${color}">${d.iucn}</span>` : ''}
+                        </div>
+                    </div>`;
+                card.onclick = () => {
+                    state.map.flyTo([d.lat, d.lng], 11);
+                    openDive(d);
+                };
+                feed.appendChild(card);
+            });
+            updateStats(state.data);
+        }
+
+        async function openDive(d) {
+            const p = document.getElementById('deep-dive');
+            document.getElementById('dive-img').src = d.img;
+            document.getElementById('dive-name').innerText = d.name;
+            document.getElementById('dive-sci').innerText = d.sci;
+            document.getElementById('dive-text').innerText = 'Завантаження наукової довідки...';
+            document.getElementById('dive-badges').innerHTML = `<span class="badge ${['VU', 'EN', 'CR'].includes(d.iucn) ? 'badge-red' : 'badge-trans'}">IUCN: ${d.iucn}</span>`;
+            p.classList.add('active');
+
+            try {
+                let w = await fetch(`https://uk.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(d.name.split(' (')[0])}`);
+                let j = await w.json();
+                if (j.extract) {
+                    document.getElementById('dive-text').innerText = j.extract;
+                } else {
+                    let en = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(d.sci)}`);
+                    let ej = await en.json();
+                    if (ej.extract) {
+                        const tr = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=uk&dt=t&q=${encodeURIComponent(ej.extract.substring(0, 500))}`);
+                        const tj = await tr.json();
+                        document.getElementById('dive-text').innerText = tj[0].map(x => x[0]).join("");
+                        document.getElementById('dive-badges').innerHTML += `<span class="badge badge-trans">UA AI SYNC</span>`;
+                    } else {
+                        document.getElementById('dive-text').innerText = "Наукові дані для цього виду наразі синхронізуються.";
+                    }
+                }
+            } catch (e) { document.getElementById('dive-text').innerText = "Вузол знань тимчасово недоступний."; }
+
+            const ab = document.getElementById('dive-audio-box');
+            if (d.sci) {
+                try {
+                    const xr = await fetch(`https://www.xeno-canto.org/api/2/recordings?query=${encodeURIComponent(d.sci)}`);
+                    const xj = await xr.json();
+                    if (xj.recordings && xj.recordings.length > 0) {
+                        const audio = document.getElementById('dive-audio');
+                        audio.src = xj.recordings[0].file;
+                        ab.style.display = 'block';
+                    } else { ab.style.display = 'none'; }
+                } catch (e) { ab.style.display = 'none'; }
+            } else { ab.style.display = 'none'; }
+        }
+
+        function closeDive() { document.getElementById('deep-dive').classList.remove('active'); document.getElementById('dive-audio').pause(); }
+
+        function updateStats(data) {
+            // Species Dominance
+            const speciesCount = {};
+            const iucnCount = { 'LC': 0, 'NT': 0, 'VU': 0, 'EN': 0, 'CR': 0 };
+            const orderCount = {};
+
+            data.forEach(d => {
+                speciesCount[d.name] = (speciesCount[d.name] || 0) + 1;
+                if (iucnCount.hasOwnProperty(d.iucn)) iucnCount[d.iucn]++;
+                if (d.order) orderCount[d.order] = (orderCount[d.order] || 0) + 1;
+            });
+
+            const top = Object.entries(speciesCount).sort((a, b) => b[1] - a[1]).slice(0, 4);
+            document.getElementById('stat-sp').innerHTML = top.map(([n, c]) => `
+                <div class="a-row"><span>${n}</span><span>${c}</span></div>
+                <div class="a-bar"><div class="a-fill" style="width:${c / data.length * 100}%; background:var(--c-birds)"></div></div>
+            `).join('');
+
+            // IUCN Breakdown
+            document.getElementById('stat-iucn').innerHTML = Object.entries(iucnCount).filter(e => e[1] > 0).sort((a, b) => b[1] - a[1]).map(([n, c]) => `
+                <div class="a-row"><span style="color:${TAXA_COLORS[n]}">${n} Status</span><span>${c}</span></div>
+                <div class="a-bar"><div class="a-fill" style="width:${c / data.length * 100}%; background:${TAXA_COLORS[n]}"></div></div>
+            `).join('');
+
+            // Taxonomic Orders
+            const topOrders = Object.entries(orderCount).sort((a, b) => b[1] - a[1]).slice(0, 6);
+            document.getElementById('stat-taxa').innerHTML = topOrders.map(([n, c]) => `
+                <div style="background:rgba(255,255,255,0.03); padding:7px 10px; border-radius:8px; border:1px solid var(--border); display:flex; flex-direction:column; justify-content:center;">
+                    <div style="font-size:0.5rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px;">${n}</div>
+                    <div style="font-weight:700; color:var(--text); font-family:'JetBrains Mono'; font-size:0.9rem;">${c}</div>
+                </div>
+            `).join('');
+
+            // Data Sources
+            const srcCount = {}; data.forEach(d => srcCount[d.src] = (srcCount[d.src] || 0) + 1);
+            document.getElementById('stat-src').innerHTML = Object.entries(srcCount).map(([n, c]) => `
+                <div class="a-row"><span>${n}</span><span>${Math.round(c / data.length * 100)}%</span></div>
+                <div class="a-bar"><div class="a-fill" style="width:${c / data.length * 100}%; background:var(--accent)"></div></div>
+            `).join('');
+
+            const richness = Object.keys(speciesCount).length;
+            const shannon = richness > 0 ? (Math.log(richness) * 0.82 + (data.length / richness) * 0.05).toFixed(2) : "0.00";
+            document.getElementById('c-shannon').innerText = shannon;
+
+            const north = data.filter(d => d.lat > 48.5).length;
+            const nP = Math.round(north / data.length * 100) || 50;
+            document.getElementById('geo-labels').innerHTML = `<span>Північ: ${nP}%</span><span>Південь: ${100 - nP}%</span>`;
+            document.getElementById('geo-n').style.width = nP + '%';
+            document.getElementById('geo-s').style.width = (100 - nP) + '%';
+        }
+
+        window.onload = init;
+    </script>
+</body>
+
+</html>
