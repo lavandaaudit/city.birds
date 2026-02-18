@@ -10,10 +10,11 @@
         content="Науковий моніторинг орнітофауни України в реальному часі. Агрегація даних iNaturalist, GBIF та Bird Radar.">
     <!-- Google Fonts -->
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
         rel="stylesheet">
-    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
     <style>
         :root {
             --bg: #050608;
@@ -329,20 +330,19 @@
         }
 
         .btn.active {
-            color: #fff;
-            background: rgba(255, 255, 255, 0.1);
+            color: #fff !important;
+            background: var(--c-birds) !important;
         }
 
-        .btn.active[data-time="24h"] {
-            background: var(--c-birds);
-        }
-
-        .btn.active[data-time="7d"] {
-            background: var(--c-birds);
-        }
-
-        .btn.active[data-time="3m"] {
-            background: var(--c-birds);
+        .region-select {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            outline: none;
+            cursor: pointer;
         }
 
         /* Deep Dive Overlay */
@@ -541,6 +541,19 @@
             background: rgba(255, 255, 255, 0.05);
             color: var(--text-dim);
         }
+
+        @media (max-width: 600px) {
+            .controls {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 10px;
+                padding: 10px;
+            }
+
+            .region-select {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 
@@ -576,6 +589,9 @@
                 <div id="analytics-view" style="display:contents;">
                     <div class="glass">
                         <div class="title">Science Metrics (UA)</div>
+                        <div id="selected-region-name"
+                            style="font-size: 0.9rem; font-weight: 700; color: var(--accent); margin-bottom: 10px;">Уся
+                            Україна</div>
                         <div class="stat-grid">
                             <div class="stat-box">
                                 <span class="stat-val" id="c-total">0</span>
@@ -586,6 +602,13 @@
                                 <span class="stat-lab">Біо-ініціал</span>
                             </div>
                         </div>
+                        <div class="title" id="weather-title">Метео-Синхронізація (UA)</div>
+                        <div id="weather-grid"
+                            style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom:15px;"></div>
+
+                        <div class="title">Червона Варта (UA Alert)</div>
+                        <div id="red-alerts" style="margin-bottom:15px;"></div>
+
                         <div class="title">Популяційний Пульс</div>
                         <div id="geo-labels" class="a-row" style="font-size: 0.65rem;"><span>Північ:
                                 0%</span><span>Південь: 0%</span></div>
@@ -612,7 +635,9 @@
                     </div>
 
                     <div class="glass">
-                        <div class="title">Real-Time UA Sync</div>
+                        <div class="title">Hotspot Intelligence</div>
+                        <div id="stat-hotspots" style="font-size: 0.7rem; color: var(--text-dim);"></div>
+                        <div class="title" style="margin-top:15px;">Real-Time UA Sync</div>
                         <div style="font-size:0.7rem; color:var(--text-dim); line-height:1.5;">
                             Моніторинг: <b>Aves (Birds) only</b>. Регіон: <b>Україна</b>.
                             Агрегація: <b>iNat UA + GBIF Node</b>.
@@ -638,22 +663,27 @@
         </div>
 
         <div class="controls">
-            <button class="btn active" data-time="1m">1 МІСЯЦЬ</button>
-            <button class="btn" data-time="3m">3 МІСЯЦІ</button>
-            <button class="btn" data-time="6m">6 МІСЯЦІВ</button>
-            <button class="btn" data-time="12m">12 МІСЯЦІВ</button>
+            <button class="btn active" data-time="1m">МІСЯЦЬ</button>
+            <button class="btn" data-time="12m">РІК</button>
+            <div style="width: 1px; background: var(--border); margin: 0 4px;"></div>
+            <button class="btn" onclick="state.map.zoomIn()" style="font-weight:700; width:45px;">+</button>
+            <button class="btn" onclick="state.map.zoomOut()" style="font-weight:700; width:45px;">-</button>
         </div>
     </main>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         const state = {
             map: null,
+            heatmap: null,
+            geojson: null,
             data: [],
             markers: [],
             timePeriod: '1m',
-            stats: { speciesList: [], sources: {}, iucn: {} }
+            selectedRegion: null, // Stores the GeoJSON layer
+            regionName: 'Уся Україна',
+            bounds: [44, 22, 53, 41]
         };
+
 
         const TAXA_COLORS = {
             'LC': '#58a6ff', // Least Concern - Blue
@@ -668,23 +698,69 @@
             state.map = L.map('map', { zoomControl: false, attributionControl: false }).setView([48.3794, 31.1656], 6);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(state.map);
 
-            const southWest = L.latLng(44.0, 22.0),
-                northEast = L.latLng(53.0, 41.0);
-            const bounds = L.latLngBounds(southWest, northEast);
-            state.map.setMaxBounds(bounds);
+            if (typeof L.heatLayer === 'function') {
+                state.heatmap = L.heatLayer([], { radius: 25, blur: 15, maxZoom: 10, gradient: { 0.4: 'cyan', 0.6: 'lime', 1: 'yellow' } }).addTo(state.map);
+            }
+
+            // Load Region Boundaries
+            fetch('https://raw.githubusercontent.com/EugeneBorshch/ukraine_geojson/master/UA_FULL_Ukraine.geojson')
+                .then(r => r.json())
+                .then(data => {
+                    state.geojson = L.geoJson(data, {
+                        style: {
+                            color: 'rgba(255,255,255,0.12)',
+                            weight: 1,
+                            fillColor: 'transparent',
+                            fillOpacity: 0.1
+                        },
+                        onEachFeature: (feature, layer) => {
+                            layer.on({
+                                mouseover: (e) => {
+                                    if (state.selectedRegion !== layer) layer.setStyle({ fillColor: 'var(--accent)', fillOpacity: 0.2 });
+                                },
+                                mouseout: (e) => {
+                                    if (state.selectedRegion !== layer) layer.setStyle({ fillColor: 'transparent', fillOpacity: 0.1 });
+                                },
+                                click: (e) => {
+                                    if (state.selectedRegion) state.geojson.resetStyle(state.selectedRegion);
+                                    state.selectedRegion = layer;
+                                    layer.setStyle({ color: 'var(--accent)', weight: 3, fillColor: 'var(--accent)', fillOpacity: 0.4 });
+                                    state.map.fitBounds(layer.getBounds(), { padding: [50, 50] });
+                                    state.regionName = feature.properties.name || "Область";
+                                    document.getElementById('selected-region-name').innerText = state.regionName;
+                                    const b = layer.getBounds();
+                                    state.bounds = [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()];
+                                    refresh();
+                                }
+                            });
+                        }
+                    }).addTo(state.map);
+                });
 
             refresh();
-            setInterval(refresh, 600000); // 10 min refresh
+            fetchWeather();
+            setInterval(refresh, 600000);
+            setInterval(fetchWeather, 1800000);
             setInterval(() => { document.getElementById('time').innerText = new Date().toLocaleTimeString('uk-UA'); }, 1000);
 
-            document.querySelectorAll('.btn').forEach(b => {
+            document.querySelectorAll('.btn[data-time]').forEach(b => {
                 b.onclick = () => {
-                    document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
+                    document.querySelectorAll('.btn[data-time]').forEach(btn => btn.classList.remove('active'));
                     b.classList.add('active');
                     state.timePeriod = b.dataset.time;
                     refresh();
                 };
             });
+        }
+
+        function resetRegion() {
+            if (state.selectedRegion) state.geojson.resetStyle(state.selectedRegion);
+            state.selectedRegion = null;
+            state.regionName = 'Уся Україна';
+            document.getElementById('selected-region-name').innerText = state.regionName;
+            state.bounds = [44, 22, 53, 41];
+            state.map.setView([48.3794, 31.1656], 6);
+            refresh();
         }
 
         async function refresh() {
@@ -695,8 +771,6 @@
                 const now = new Date();
                 let d1;
                 if (state.timePeriod === '1m') d1 = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-                else if (state.timePeriod === '3m') d1 = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
-                else if (state.timePeriod === '6m') d1 = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
                 else if (state.timePeriod === '12m') d1 = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
                 else d1 = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
 
@@ -704,10 +778,10 @@
                 const nowIso = now.toISOString().split('T')[0];
 
                 // Increase limits to show difference between 1m and 12m
-                // iNat: max 200 per page. For 6m/12m we fetch 2 pages.
-                const perPage = (state.timePeriod === '6m' || state.timePeriod === '12m') ? 200 : 200;
-                const inatUrlP1 = `https://api.inaturalist.org/v1/observations?taxon_id=3&place_id=7015&d1=${d1Iso}&per_page=${perPage}&order=desc&order_by=created_at&quality_grade=research,needs_id`;
-                const inatUrlP2 = `https://api.inaturalist.org/v1/observations?taxon_id=3&place_id=7015&d1=${d1Iso}&per_page=${perPage}&page=2&order=desc&order_by=created_at&quality_grade=research,needs_id`;
+                // Cleanest iNat URL to avoid 422
+                const inatBase = `https://api.inaturalist.org/v1/observations?taxon_id=3&place_id=7015&d1=${d1Iso}&per_page=200`;
+                const inatUrlP1 = `${inatBase}&order=desc&order_by=created_at`;
+                const inatUrlP2 = `${inatBase}&page=2&order=desc&order_by=created_at`;
 
                 // GBIF: limit up to 1000 for better density
                 const gbifLimit = (state.timePeriod === '1m') ? 400 : 1000;
@@ -718,8 +792,8 @@
                     fetch(gbifUrl).then(r => r.json())
                 ];
 
-                // Add second page for long periods
-                if (state.timePeriod === '6m' || state.timePeriod === '12m') {
+                // Add second page for Year
+                if (state.timePeriod === '12m') {
                     requests.push(fetch(inatUrlP2).then(r => r.json()));
                 }
 
@@ -758,16 +832,20 @@
                     iucn: 'LC'
                 }));
 
-                const merged = [...inatD1, ...inatD2, ...gbif].filter(o => o.lat !== 0 && o.lat > 44 && o.lat < 53 && o.lng > 22 && o.lng < 41);
+                const all = [...inatD1, ...inatD2, ...gbif];
+                const b = state.bounds;
+                const merged = all.filter(o => o.lat !== 0 && o.lat > b[0] && o.lat < b[2] && o.lng > b[1] && o.lng < b[3]);
 
-                // Smarter deduplication: if multiple sightings of SAME species in EXACT same spot, merge them
                 state.data = Array.from(new Map(merged.map(o => [`${o.lat.toFixed(4)},${o.lng.toFixed(4)},${o.sci}`, o])).values());
 
-                // Sort by date equivalent (newest first for the feed)
+                if (state.heatmap) {
+                    state.heatmap.setLatLngs(state.data.map(d => [d.lat, d.lng, 0.5]));
+                }
+
                 draw();
             } catch (e) {
                 console.error("API Error", e);
-                feed.innerHTML = '<div style="padding:20px; color:var(--c-red);">Помилка синхронізації. Перевірте з’єднання.</div>';
+                feed.innerHTML = '<div style="padding:20px; color:var(--c-red);">Помилка вузлів UA SYNC.</div>';
             }
         }
 
@@ -870,18 +948,74 @@
 
         function closeDive() { document.getElementById('deep-dive').classList.remove('active'); document.getElementById('dive-audio').pause(); }
 
+        async function fetchWeather() {
+            const cities = [
+                { name: 'Київ', lat: 50.45, lon: 30.52 },
+                { name: 'Одеса', lat: 46.48, lon: 30.72 },
+                { name: 'Львів', lat: 49.83, lon: 24.02 },
+                { name: 'Харків', lat: 49.99, lon: 36.23 }
+            ];
+            const grid = document.getElementById('weather-grid');
+            grid.innerHTML = '';
+
+            try {
+                for (let city of cities) {
+                    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current_weather=true`);
+                    const data = await res.json();
+                    const cw = data.current_weather;
+
+                    const el = document.createElement('div');
+                    el.style = "background:rgba(255,255,255,0.03); padding:8px; border-radius:10px; border:1px solid var(--border);";
+                    el.innerHTML = `
+                        <div style="font-size:0.6rem; color:var(--text-dim);">${city.name}</div>
+                        <div style="font-size:0.9rem; font-weight:700;">${cw.temperature}°C</div>
+                        <div style="font-size:0.5rem; color:var(--accent);">${cw.windspeed} km/h 💨</div>
+                    `;
+                    grid.appendChild(el);
+                }
+            } catch (e) { console.error("Weather Sync Error", e); }
+        }
+
         function updateStats(data) {
-            // Species Dominance
             const speciesCount = {};
             const iucnCount = { 'LC': 0, 'NT': 0, 'VU': 0, 'EN': 0, 'CR': 0 };
             const orderCount = {};
+            const rareSpotted = [];
+            const clusters = {}; // Simple spatial clustering
 
             data.forEach(d => {
                 speciesCount[d.name] = (speciesCount[d.name] || 0) + 1;
                 if (iucnCount.hasOwnProperty(d.iucn)) iucnCount[d.iucn]++;
                 if (d.order) orderCount[d.order] = (orderCount[d.order] || 0) + 1;
+
+                if (['VU', 'EN', 'CR'].includes(d.iucn)) {
+                    rareSpotted.push(d);
+                }
+
+                const gridKey = `${Math.floor(d.lat * 2) / 2},${Math.floor(d.lng * 2) / 2}`;
+                clusters[gridKey] = (clusters[gridKey] || 0) + 1;
             });
 
+            // Red Watch Alerts
+            const redAlerts = document.getElementById('red-alerts');
+            redAlerts.innerHTML = '';
+            rareSpotted.slice(0, 3).forEach(r => {
+                const a = document.createElement('div');
+                a.style = "background:rgba(239, 68, 68, 0.1); border:1px solid rgba(239, 68, 68, 0.3); padding:8px; border-radius:10px; margin-bottom:6px; font-size:0.7rem; cursor:pointer;";
+                a.innerHTML = `⚠️ <b>${r.name}</b> (${r.iucn})<br><span style="font-size:0.6rem; color:var(--text-dim);">${r.loc}</span>`;
+                a.onclick = () => { state.map.flyTo([r.lat, r.lng], 12); openDive(r); };
+                redAlerts.appendChild(a);
+            });
+            if (rareSpotted.length === 0) redAlerts.innerHTML = '<div style="font-size:0.65rem; color:var(--text-dim);">Критичних загроз не виявлено.</div>';
+
+            // Hotspots
+            const topHotspots = Object.entries(clusters).sort((a, b) => b[1] - a[1]).slice(0, 3);
+            document.getElementById('stat-hotspots').innerHTML = topHotspots.map(([k, c]) => `
+                <div class="a-row"><span>Вузол ${k}</span><span>${c} obs</span></div>
+                <div class="a-bar"><div class="a-fill" style="width:${Math.min(c * 5, 100)}%; background:yellow"></div></div>
+            `).join('');
+
+            // Dominance
             const top = Object.entries(speciesCount).sort((a, b) => b[1] - a[1]).slice(0, 4);
             document.getElementById('stat-sp').innerHTML = top.map(([n, c]) => `
                 <div class="a-row"><span>${n}</span><span>${c}</span></div>
@@ -890,8 +1024,8 @@
 
             // IUCN Breakdown
             document.getElementById('stat-iucn').innerHTML = Object.entries(iucnCount).filter(e => e[1] > 0).sort((a, b) => b[1] - a[1]).map(([n, c]) => `
-                <div class="a-row"><span style="color:${TAXA_COLORS[n]}">${n} Status</span><span>${c}</span></div>
-                <div class="a-bar"><div class="a-fill" style="width:${c / data.length * 100}%; background:${TAXA_COLORS[n]}"></div></div>
+                <div class="a-row"><span style="color:${TAXA_COLORS[n] || '#fff'}">${n} Status</span><span>${c}</span></div>
+                <div class="a-bar"><div class="a-fill" style="width:${c / data.length * 100}%; background:${TAXA_COLORS[n] || '#8b949e'}"></div></div>
             `).join('');
 
             // Taxonomic Orders
