@@ -731,11 +731,7 @@
                                 Синхронізація...</div>
                         </div>
 
-                        <div class="title" style="font-size:0.55rem;">Топ спостерігачів-орнітологів (UA)</div>
-                        <div id="inat-observers">
-                            <div style="color:var(--text-dim); font-size:0.7rem; text-align:center; padding:8px;">
-                                Синхронізація...</div>
-                        </div>
+
                     </div>
 
                     <div class="glass">
@@ -990,22 +986,7 @@
                     `).join('');
                 }
 
-                // Observers
-                const obList = Array.isArray(obRes.results) ? obRes.results : [];
-                const obEl = document.getElementById('inat-observers');
-                if (obList.length === 0) {
-                    obEl.innerHTML = '<div style="color:var(--text-dim); font-size:0.7rem; text-align:center;">Дані недоступні</div>';
-                } else {
-                    obEl.innerHTML = obList.map(o => `
-                        <div class="inat-observer">
-                            <img class="inat-observer-img" src="${o.user.icon_url || 'https://via.placeholder.com/32/111/888?text=U'}" onerror="this.src='https://via.placeholder.com/32/111/888?text=U'">
-                            <div class="inat-observer-info">
-                                <div class="inat-observer-name">@${o.user.login}</div>
-                                <div class="inat-observer-count">🔭 ${o.observation_count} спостережень · ${o.species_count} видів</div>
-                            </div>
-                        </div>
-                    `).join('');
-                }
+
 
             } catch (e) {
                 console.error('iNat Intelligence fetch error:', e);
