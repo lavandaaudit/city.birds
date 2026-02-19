@@ -5,10 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ibonarium UA | Ukraine Bird Radar Pro</title>
-    <!-- SEO -->
     <meta name="description"
         content="Науковий моніторинг орнітофауни України в реальному часі. Агрегація даних iNaturalist, GBIF та Bird Radar.">
-    <!-- Google Fonts -->
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
         rel="stylesheet">
@@ -115,7 +113,6 @@
             background: #000;
         }
 
-        /* UI Overlays */
         .ui-layer {
             position: absolute;
             top: 0;
@@ -136,11 +133,9 @@
             flex-direction: column;
             gap: 15px;
             pointer-events: auto;
-            /* Enable interaction for scrolling */
             position: relative;
             overflow-y: auto;
             padding-bottom: 20px;
-            /* Space at the bottom */
         }
 
         .side-col::-webkit-scrollbar {
@@ -155,7 +150,6 @@
         .side-col>* {
             pointer-events: auto;
             flex-shrink: 0;
-            /* Prevent widgets from collapsing */
         }
 
         .glass {
@@ -186,7 +180,6 @@
             background: var(--border);
         }
 
-        /* Live Feed (Left) */
         #feed {
             flex: 1;
             overflow-y: auto;
@@ -249,7 +242,6 @@
             gap: 5px;
         }
 
-        /* Stats (Right) */
         .stat-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -299,7 +291,6 @@
             transition: 1s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        /* Controls */
         .controls {
             position: absolute;
             bottom: 30px;
@@ -345,7 +336,6 @@
             cursor: pointer;
         }
 
-        /* Deep Dive Overlay */
         #deep-dive {
             position: absolute;
             top: 0;
@@ -448,7 +438,97 @@
             border: 1px solid rgba(88, 166, 255, 0.2);
         }
 
-        /* Mobile Adjustments */
+        .badge-inat {
+            background: rgba(116, 172, 0, 0.2);
+            color: var(--c-inat);
+            border: 1px solid rgba(116, 172, 0, 0.3);
+        }
+
+        /* iNat Intelligence panel */
+        .inat-observer {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            margin-bottom: 7px;
+        }
+
+        .inat-observer-img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid var(--c-inat);
+            object-fit: cover;
+        }
+
+        .inat-observer-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .inat-observer-name {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .inat-observer-count {
+            font-size: 0.6rem;
+            color: var(--c-inat);
+        }
+
+        .inat-sp-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            font-size: 0.7rem;
+        }
+
+        .inat-sp-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 220px;
+            color: var(--text);
+        }
+
+        .inat-sp-count {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--c-inat);
+            flex-shrink: 0;
+        }
+
+        .inat-pulse {
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--c-inat);
+            margin-right: 5px;
+            animation: ipulse 1.5s infinite;
+        }
+
+        @keyframes ipulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
+        }
+
         @media (max-width: 900px) {
             body {
                 overflow-x: hidden;
@@ -593,22 +673,25 @@
                             style="font-size: 0.9rem; font-weight: 700; color: var(--accent); margin-bottom: 10px;">Уся
                             Україна</div>
                         <div class="stat-grid">
-                            <div class="stat-box">
-                                <span class="stat-val" id="c-total">0</span>
-                                <span class="stat-lab">Знахідок</span>
+                            <div class="stat-box"><span class="stat-val" id="c-total">0</span><span
+                                    class="stat-lab">Знахідок</span></div>
+                            <div class="stat-box"><span class="stat-val" id="c-shannon">0.00</span><span
+                                    class="stat-lab">Біо-ініціал</span></div>
+                        </div>
+                        <!-- iNat live counters -->
+                        <div class="stat-grid" style="margin-bottom:12px;">
+                            <div class="stat-box"><span class="stat-val" id="c-inat-species"
+                                    style="color:var(--c-inat);">—</span><span class="stat-lab">Видів iNat UA</span>
                             </div>
-                            <div class="stat-box">
-                                <span class="stat-val" id="c-shannon">0.00</span>
-                                <span class="stat-lab">Біо-ініціал</span>
+                            <div class="stat-box"><span class="stat-val" id="c-inat-obs"
+                                    style="color:var(--c-inat);">—</span><span class="stat-lab">Спостеж. iNat</span>
                             </div>
                         </div>
                         <div class="title" id="weather-title">Метео-Синхронізація (UA)</div>
                         <div id="weather-grid"
                             style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom:15px;"></div>
-
                         <div class="title">Червона Варта (UA Alert)</div>
                         <div id="red-alerts" style="margin-bottom:15px;"></div>
-
                         <div class="title">Популяційний Пульс</div>
                         <div id="geo-labels" class="a-row" style="font-size: 0.65rem;"><span>Північ:
                                 0%</span><span>Південь: 0%</span></div>
@@ -632,6 +715,27 @@
                         </div>
                         <div class="title" style="margin-top:15px;">Джерела Даних</div>
                         <div id="stat-src"></div>
+                    </div>
+
+                    <!-- ═══ NEW: iNat UA Intelligence Panel ═══ -->
+                    <div class="glass">
+                        <div class="title"><span class="inat-pulse"></span>iNat UA Intelligence</div>
+
+                        <div style="font-size:0.6rem; color:var(--text-dim); margin-bottom:10px;">
+                            База: <b style="color:var(--c-inat)">iNaturalist · place_id=8860 · Aves</b>
+                        </div>
+
+                        <div class="title" style="font-size:0.55rem;">Топ видів за кількістю спостережень (UA)</div>
+                        <div id="inat-species-counts" style="margin-bottom:14px;">
+                            <div style="color:var(--text-dim); font-size:0.7rem; text-align:center; padding:8px;">
+                                Синхронізація...</div>
+                        </div>
+
+                        <div class="title" style="font-size:0.55rem;">Топ спостерігачів-орнітологів (UA)</div>
+                        <div id="inat-observers">
+                            <div style="color:var(--text-dim); font-size:0.7rem; text-align:center; padding:8px;">
+                                Синхронізація...</div>
+                        </div>
                     </div>
 
                     <div class="glass">
@@ -679,19 +783,14 @@
             data: [],
             markers: [],
             timePeriod: '1m',
-            selectedRegion: null, // Stores the GeoJSON layer
+            selectedRegion: null,
             regionName: 'Уся Україна',
             bounds: [44, 22, 53, 41]
         };
 
-
         const TAXA_COLORS = {
-            'LC': '#58a6ff', // Least Concern - Blue
-            'NT': '#a855f7', // Near Threatened - Purple
-            'VU': '#ff9800', // Vulnerable - Orange
-            'EN': '#ef4444', // Endangered - Red
-            'CR': '#b91c1c', // Critically Endangered - Dark Red
-            'Normal': '#ff9800' // Default Bird Color
+            'LC': '#58a6ff', 'NT': '#a855f7', 'VU': '#ff9800',
+            'EN': '#ef4444', 'CR': '#b91c1c', 'Normal': '#ff9800'
         };
 
         function init() {
@@ -702,26 +801,16 @@
                 state.heatmap = L.heatLayer([], { radius: 25, blur: 15, maxZoom: 10, gradient: { 0.4: 'cyan', 0.6: 'lime', 1: 'yellow' } }).addTo(state.map);
             }
 
-            // Load Region Boundaries
             fetch('https://raw.githubusercontent.com/EugeneBorshch/ukraine_geojson/master/UA_FULL_Ukraine.geojson')
                 .then(r => r.json())
                 .then(data => {
                     state.geojson = L.geoJson(data, {
-                        style: {
-                            color: 'rgba(255,255,255,0.12)',
-                            weight: 1,
-                            fillColor: 'transparent',
-                            fillOpacity: 0.1
-                        },
+                        style: { color: 'rgba(255,255,255,0.12)', weight: 1, fillColor: 'transparent', fillOpacity: 0.1 },
                         onEachFeature: (feature, layer) => {
                             layer.on({
-                                mouseover: (e) => {
-                                    if (state.selectedRegion !== layer) layer.setStyle({ fillColor: 'var(--accent)', fillOpacity: 0.2 });
-                                },
-                                mouseout: (e) => {
-                                    if (state.selectedRegion !== layer) layer.setStyle({ fillColor: 'transparent', fillOpacity: 0.1 });
-                                },
-                                click: (e) => {
+                                mouseover: () => { if (state.selectedRegion !== layer) layer.setStyle({ fillColor: 'var(--accent)', fillOpacity: 0.2 }); },
+                                mouseout: () => { if (state.selectedRegion !== layer) layer.setStyle({ fillColor: 'transparent', fillOpacity: 0.1 }); },
+                                click: () => {
                                     if (state.selectedRegion) state.geojson.resetStyle(state.selectedRegion);
                                     state.selectedRegion = layer;
                                     layer.setStyle({ color: 'var(--accent)', weight: 3, fillColor: 'var(--accent)', fillOpacity: 0.4 });
@@ -739,9 +828,15 @@
 
             refresh();
             fetchWeather();
+            fetchInatIntelligence();
+
             setInterval(refresh, 600000);
             setInterval(fetchWeather, 1800000);
-            setInterval(() => { document.getElementById('time').innerText = new Date().toLocaleTimeString('uk-UA'); }, 1000);
+            setInterval(fetchInatIntelligence, 900000); // update iNat intelligence every 15 min
+
+            setInterval(() => {
+                document.getElementById('time').innerText = new Date().toLocaleTimeString('uk-UA');
+            }, 1000);
 
             document.querySelectorAll('.btn[data-time]').forEach(b => {
                 b.onclick = () => {
@@ -771,55 +866,48 @@
                 const now = new Date();
                 let d1;
                 if (state.timePeriod === '1m') d1 = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-                else if (state.timePeriod === '12m') d1 = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-                else d1 = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+                else d1 = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
 
                 const d1Iso = d1.toISOString().split('T')[0];
                 const nowIso = now.toISOString().split('T')[0];
 
-                // Increase limits to show difference between 1m and 12m
-                // Cleanest iNat URL to avoid 422
-                const inatBase = `https://api.inaturalist.org/v1/observations?taxon_id=3&place_id=7015&d1=${d1Iso}&per_page=200`;
-                const inatUrlP1 = `${inatBase}&order=desc&order_by=created_at`;
-                const inatUrlP2 = `${inatBase}&page=2&order=desc&order_by=created_at`;
-
-                // GBIF: limit up to 1000 for better density
+                const inatBase = `https://api.inaturalist.org/v1/observations?taxon_id=3&place_id=8860&d1=${d1Iso}&order=desc&order_by=created_at&per_page=200`;
                 const gbifLimit = (state.timePeriod === '1m') ? 400 : 1000;
                 const gbifUrl = `https://api.gbif.org/v1/occurrence/search?taxonKey=212&country=UA&eventDate=${d1Iso},${nowIso}&limit=${gbifLimit}`;
 
+                // Parallel: iNat pages 1+2+3 + GBIF
                 const requests = [
-                    fetch(inatUrlP1).then(r => r.json()),
-                    fetch(gbifUrl).then(r => r.json())
+                    fetch(`${inatBase}&page=1`).then(r => r.json()),
+                    fetch(`${inatBase}&page=2`).then(r => r.json()),
+                    fetch(gbifUrl).then(r => r.json()),
                 ];
-
-                // Add second page for Year
+                // For 12m — also fetch pages 3 and 4 for denser data
                 if (state.timePeriod === '12m') {
-                    requests.push(fetch(inatUrlP2).then(r => r.json()));
+                    requests.push(fetch(`${inatBase}&page=3`).then(r => r.json()));
+                    requests.push(fetch(`${inatBase}&page=4`).then(r => r.json()));
                 }
 
                 const results = await Promise.all(requests);
-                const r1 = results[0];
-                const rGBIF = results[1];
-                const r1P2 = results[2] || { results: [] };
+                const [r1, r2, rGBIF, r3, r4] = results;
 
-                const processInat = (res) => (res.results || []).map(o => ({
+                const processInat = (res) => (res && res.results ? res.results : []).map(o => ({
                     id: 'inat-' + o.id,
                     name: o.taxon ? (o.taxon.preferred_common_name || o.taxon.name) : 'Невідомий птах',
                     sci: o.taxon ? o.taxon.name : '',
                     rank: o.taxon ? o.taxon.rank : '',
-                    order: o.taxon && o.taxon.ancestor_ids ? o.taxon.iconic_taxon_name : 'Aves',
+                    order: o.taxon ? o.taxon.iconic_taxon_name : 'Aves',
                     lat: o.location ? parseFloat(o.location.split(',')[0]) : 0,
                     lng: o.location ? parseFloat(o.location.split(',')[1]) : 0,
                     img: (o.photos && o.photos[0]) ? o.photos[0].url.replace('square', 'medium') : 'https://via.placeholder.com/150/111/fff?text=iNat',
                     loc: o.place_guess || 'Україна',
                     src: 'iNaturalist',
-                    iucn: o.taxon && o.taxon.conservation_status ? o.taxon.conservation_status.status : 'LC'
+                    iucn: o.taxon && o.taxon.conservation_status ? o.taxon.conservation_status.status : 'LC',
+                    user: o.user ? o.user.login : '—',
+                    date: o.observed_on || '',
+                    qualityGrade: o.quality_grade || ''
                 }));
 
-                const inatD1 = processInat(r1);
-                const inatD2 = processInat(r1P2);
-
-                const gbif = (rGBIF.results || []).map(o => ({
+                const gbifData = (rGBIF && rGBIF.results ? rGBIF.results : []).map(o => ({
                     id: 'gbif-' + o.key,
                     name: o.vernacularName || o.species || 'Птах UA',
                     sci: o.species || '',
@@ -827,16 +915,32 @@
                     lat: o.decimalLatitude || 0,
                     lng: o.decimalLongitude || 0,
                     img: (o.media && o.media[0]) ? o.media[0].identifier : 'https://via.placeholder.com/150/111/fff?text=GBIF',
-                    loc: o.stateProvince || o.locality || 'Український Вузол',
+                    loc: o.stateProvince || o.locality || 'Україна',
                     src: 'GBIF Node',
-                    iucn: 'LC'
+                    iucn: 'LC',
+                    user: '—',
+                    date: o.eventDate ? o.eventDate.slice(0, 10) : ''
                 }));
 
-                const all = [...inatD1, ...inatD2, ...gbif];
-                const b = state.bounds;
-                const merged = all.filter(o => o.lat !== 0 && o.lat > b[0] && o.lat < b[2] && o.lng > b[1] && o.lng < b[3]);
+                const all = [
+                    ...processInat(r1),
+                    ...processInat(r2),
+                    ...processInat(r3 || {}),
+                    ...processInat(r4 || {}),
+                    ...gbifData
+                ];
 
-                state.data = Array.from(new Map(merged.map(o => [`${o.lat.toFixed(4)},${o.lng.toFixed(4)},${o.sci}`, o])).values());
+                // Update iNat totals counter from first response
+                if (r1 && r1.total_results) {
+                    const tot = r1.total_results;
+                    document.getElementById('c-inat-obs').innerText = tot >= 1000 ? (tot / 1000).toFixed(1) + 'k' : tot;
+                }
+
+                const b = state.bounds;
+                const filtered = all.filter(o => o.lat !== 0 && o.lat > b[0] && o.lat < b[2] && o.lng > b[1] && o.lng < b[3]);
+                state.data = Array.from(
+                    new Map(filtered.map(o => [`${o.lat.toFixed(4)},${o.lng.toFixed(4)},${o.sci}`, o])).values()
+                );
 
                 if (state.heatmap) {
                     state.heatmap.setLatLngs(state.data.map(d => [d.lat, d.lng, 0.5]));
@@ -849,6 +953,66 @@
             }
         }
 
+        // ═══ iNat Intelligence: species_counts + observers ═══
+        async function fetchInatIntelligence() {
+            try {
+                const [scRes, obRes, cntRes] = await Promise.all([
+                    fetch('https://api.inaturalist.org/v1/observations/species_counts?taxon_id=3&place_id=8860&per_page=12').then(r => r.json()),
+                    fetch('https://api.inaturalist.org/v1/observations/observers?taxon_id=3&place_id=8860&per_page=6').then(r => r.json()),
+                    // Dedicated count query — per_page=1 gets total_results = all bird obs in UA
+                    fetch('https://api.inaturalist.org/v1/observations?taxon_id=3&place_id=8860&per_page=1').then(r => r.json())
+                ]);
+
+                // Total observations (UA all time)
+                const totalObs = Number(cntRes.total_results) || 0;
+                document.getElementById('c-inat-obs').innerText =
+                    totalObs >= 1000000 ? (totalObs / 1000000).toFixed(1) + 'M'
+                        : totalObs >= 1000 ? (totalObs / 1000).toFixed(1) + 'k'
+                            : (totalObs > 0 ? totalObs : '—');
+
+                // Total unique species from species_counts total_results
+                const totalSpecies = Number(scRes.total_results) || 0;
+                document.getElementById('c-inat-species').innerText = totalSpecies > 0 ? totalSpecies : '—';
+
+                // Species counts list
+                const spList = Array.isArray(scRes.results) ? scRes.results : [];
+                const scEl = document.getElementById('inat-species-counts');
+                if (spList.length === 0) {
+                    scEl.innerHTML = '<div style="color:var(--text-dim); font-size:0.7rem; text-align:center;">Дані недоступні</div>';
+                } else {
+                    const maxSc = spList[0].count || 1;
+                    scEl.innerHTML = spList.map((s, i) => `
+                        <div class="inat-sp-item">
+                            <span class="inat-sp-name">${i + 1}. ${s.taxon.preferred_common_name || s.taxon.name}</span>
+                            <span class="inat-sp-count">${s.count}</span>
+                        </div>
+                        <div class="a-bar" style="margin-bottom:6px;"><div class="a-fill" style="width:${s.count / maxSc * 100}%; background:var(--c-inat);"></div></div>
+                    `).join('');
+                }
+
+                // Observers
+                const obList = Array.isArray(obRes.results) ? obRes.results : [];
+                const obEl = document.getElementById('inat-observers');
+                if (obList.length === 0) {
+                    obEl.innerHTML = '<div style="color:var(--text-dim); font-size:0.7rem; text-align:center;">Дані недоступні</div>';
+                } else {
+                    obEl.innerHTML = obList.map(o => `
+                        <div class="inat-observer">
+                            <img class="inat-observer-img" src="${o.user.icon_url || 'https://via.placeholder.com/32/111/888?text=U'}" onerror="this.src='https://via.placeholder.com/32/111/888?text=U'">
+                            <div class="inat-observer-info">
+                                <div class="inat-observer-name">@${o.user.login}</div>
+                                <div class="inat-observer-count">🔭 ${o.observation_count} спостережень · ${o.species_count} видів</div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+
+            } catch (e) {
+                console.error('iNat Intelligence fetch error:', e);
+                document.getElementById('c-inat-species').innerText = 'ERR';
+                document.getElementById('c-inat-obs').innerText = 'ERR';
+            }
+        }
         function draw() {
             const feed = document.getElementById('feed');
             state.markers.forEach(m => state.map.removeLayer(m));
@@ -874,10 +1038,7 @@
                     fillOpacity: 0.85
                 }).addTo(state.map);
 
-                m.on('click', () => {
-                    state.map.flyTo([d.lat, d.lng], 11);
-                    openDive(d);
-                });
+                m.on('click', () => { state.map.flyTo([d.lat, d.lng], 11); openDive(d); });
                 state.markers.push(m);
 
                 const card = document.createElement('div');
@@ -890,17 +1051,16 @@
                     <div class="card-info">
                         <div class="card-name">${d.name}</div>
                         <div class="card-meta">
-                            <span style="color:${color}">●</span> ${d.loc} 
-                            <span class="tag" style="background:rgba(255,255,255,0.05)">${d.src}</span>
-                            ${d.iucn !== 'LC' ? `<span class="tag" style="color:${color}; border-color:${color}">${d.iucn}</span>` : ''}
+                            <span style="color:${color}">●</span> ${d.loc}
+                            <span class="tag">${d.src}</span>
+                            ${d.iucn !== 'LC' ? `<span class="tag" style="color:${color}">${d.iucn}</span>` : ''}
                         </div>
+                        ${d.date ? `<div class="card-meta" style="margin-top:2px; font-size:0.6rem;">📅 ${d.date}${d.user !== '—' ? ` · 👤 ${d.user}` : ''}</div>` : ''}
                     </div>`;
-                card.onclick = () => {
-                    state.map.flyTo([d.lat, d.lng], 11);
-                    openDive(d);
-                };
+                card.onclick = () => { state.map.flyTo([d.lat, d.lng], 11); openDive(d); };
                 feed.appendChild(card);
             });
+
             updateStats(state.data);
         }
 
@@ -910,7 +1070,10 @@
             document.getElementById('dive-name').innerText = d.name;
             document.getElementById('dive-sci').innerText = d.sci;
             document.getElementById('dive-text').innerText = 'Завантаження наукової довідки...';
-            document.getElementById('dive-badges').innerHTML = `<span class="badge ${['VU', 'EN', 'CR'].includes(d.iucn) ? 'badge-red' : 'badge-trans'}">IUCN: ${d.iucn}</span>`;
+            document.getElementById('dive-badges').innerHTML = `
+                <span class="badge ${['VU', 'EN', 'CR'].includes(d.iucn) ? 'badge-red' : 'badge-trans'}">IUCN: ${d.iucn}</span>
+                <span class="badge badge-inat">${d.src}</span>
+            `;
             p.classList.add('active');
 
             try {
@@ -924,13 +1087,15 @@
                     if (ej.extract) {
                         const tr = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=uk&dt=t&q=${encodeURIComponent(ej.extract.substring(0, 500))}`);
                         const tj = await tr.json();
-                        document.getElementById('dive-text').innerText = tj[0].map(x => x[0]).join("");
+                        document.getElementById('dive-text').innerText = tj[0].map(x => x[0]).join('');
                         document.getElementById('dive-badges').innerHTML += `<span class="badge badge-trans">UA AI SYNC</span>`;
                     } else {
-                        document.getElementById('dive-text').innerText = "Наукові дані для цього виду наразі синхронізуються.";
+                        document.getElementById('dive-text').innerText = 'Наукові дані для цього виду наразі синхронізуються.';
                     }
                 }
-            } catch (e) { document.getElementById('dive-text').innerText = "Вузол знань тимчасово недоступний."; }
+            } catch (e) {
+                document.getElementById('dive-text').innerText = 'Вузол знань тимчасово недоступний.';
+            }
 
             const ab = document.getElementById('dive-audio-box');
             if (d.sci) {
@@ -938,15 +1103,17 @@
                     const xr = await fetch(`https://www.xeno-canto.org/api/2/recordings?query=${encodeURIComponent(d.sci)}`);
                     const xj = await xr.json();
                     if (xj.recordings && xj.recordings.length > 0) {
-                        const audio = document.getElementById('dive-audio');
-                        audio.src = xj.recordings[0].file;
+                        document.getElementById('dive-audio').src = xj.recordings[0].file;
                         ab.style.display = 'block';
                     } else { ab.style.display = 'none'; }
                 } catch (e) { ab.style.display = 'none'; }
             } else { ab.style.display = 'none'; }
         }
 
-        function closeDive() { document.getElementById('deep-dive').classList.remove('active'); document.getElementById('dive-audio').pause(); }
+        function closeDive() {
+            document.getElementById('deep-dive').classList.remove('active');
+            document.getElementById('dive-audio').pause();
+        }
 
         async function fetchWeather() {
             const cities = [
@@ -957,13 +1124,11 @@
             ];
             const grid = document.getElementById('weather-grid');
             grid.innerHTML = '';
-
             try {
                 for (let city of cities) {
                     const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current_weather=true`);
                     const data = await res.json();
                     const cw = data.current_weather;
-
                     const el = document.createElement('div');
                     el.style = "background:rgba(255,255,255,0.03); padding:8px; border-radius:10px; border:1px solid var(--border);";
                     el.innerHTML = `
@@ -973,62 +1138,50 @@
                     `;
                     grid.appendChild(el);
                 }
-            } catch (e) { console.error("Weather Sync Error", e); }
+            } catch (e) { console.error('Weather Sync Error', e); }
         }
 
         function updateStats(data) {
-            const speciesCount = {};
-            const iucnCount = { 'LC': 0, 'NT': 0, 'VU': 0, 'EN': 0, 'CR': 0 };
-            const orderCount = {};
-            const rareSpotted = [];
-            const clusters = {}; // Simple spatial clustering
+            const speciesCount = {}, iucnCount = { 'LC': 0, 'NT': 0, 'VU': 0, 'EN': 0, 'CR': 0 };
+            const orderCount = {}, rareSpotted = [], clusters = {};
 
             data.forEach(d => {
                 speciesCount[d.name] = (speciesCount[d.name] || 0) + 1;
                 if (iucnCount.hasOwnProperty(d.iucn)) iucnCount[d.iucn]++;
                 if (d.order) orderCount[d.order] = (orderCount[d.order] || 0) + 1;
-
-                if (['VU', 'EN', 'CR'].includes(d.iucn)) {
-                    rareSpotted.push(d);
-                }
-
+                if (['VU', 'EN', 'CR'].includes(d.iucn)) rareSpotted.push(d);
                 const gridKey = `${Math.floor(d.lat * 2) / 2},${Math.floor(d.lng * 2) / 2}`;
                 clusters[gridKey] = (clusters[gridKey] || 0) + 1;
             });
 
-            // Red Watch Alerts
             const redAlerts = document.getElementById('red-alerts');
             redAlerts.innerHTML = '';
             rareSpotted.slice(0, 3).forEach(r => {
                 const a = document.createElement('div');
-                a.style = "background:rgba(239, 68, 68, 0.1); border:1px solid rgba(239, 68, 68, 0.3); padding:8px; border-radius:10px; margin-bottom:6px; font-size:0.7rem; cursor:pointer;";
+                a.style = "background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); padding:8px; border-radius:10px; margin-bottom:6px; font-size:0.7rem; cursor:pointer;";
                 a.innerHTML = `⚠️ <b>${r.name}</b> (${r.iucn})<br><span style="font-size:0.6rem; color:var(--text-dim);">${r.loc}</span>`;
                 a.onclick = () => { state.map.flyTo([r.lat, r.lng], 12); openDive(r); };
                 redAlerts.appendChild(a);
             });
             if (rareSpotted.length === 0) redAlerts.innerHTML = '<div style="font-size:0.65rem; color:var(--text-dim);">Критичних загроз не виявлено.</div>';
 
-            // Hotspots
             const topHotspots = Object.entries(clusters).sort((a, b) => b[1] - a[1]).slice(0, 3);
             document.getElementById('stat-hotspots').innerHTML = topHotspots.map(([k, c]) => `
                 <div class="a-row"><span>Вузол ${k}</span><span>${c} obs</span></div>
                 <div class="a-bar"><div class="a-fill" style="width:${Math.min(c * 5, 100)}%; background:yellow"></div></div>
             `).join('');
 
-            // Dominance
             const top = Object.entries(speciesCount).sort((a, b) => b[1] - a[1]).slice(0, 4);
             document.getElementById('stat-sp').innerHTML = top.map(([n, c]) => `
                 <div class="a-row"><span>${n}</span><span>${c}</span></div>
                 <div class="a-bar"><div class="a-fill" style="width:${c / data.length * 100}%; background:var(--c-birds)"></div></div>
             `).join('');
 
-            // IUCN Breakdown
             document.getElementById('stat-iucn').innerHTML = Object.entries(iucnCount).filter(e => e[1] > 0).sort((a, b) => b[1] - a[1]).map(([n, c]) => `
                 <div class="a-row"><span style="color:${TAXA_COLORS[n] || '#fff'}">${n} Status</span><span>${c}</span></div>
                 <div class="a-bar"><div class="a-fill" style="width:${c / data.length * 100}%; background:${TAXA_COLORS[n] || '#8b949e'}"></div></div>
             `).join('');
 
-            // Taxonomic Orders
             const topOrders = Object.entries(orderCount).sort((a, b) => b[1] - a[1]).slice(0, 6);
             document.getElementById('stat-taxa').innerHTML = topOrders.map(([n, c]) => `
                 <div style="background:rgba(255,255,255,0.03); padding:7px 10px; border-radius:8px; border:1px solid var(--border); display:flex; flex-direction:column; justify-content:center;">
@@ -1037,15 +1190,15 @@
                 </div>
             `).join('');
 
-            // Data Sources
-            const srcCount = {}; data.forEach(d => srcCount[d.src] = (srcCount[d.src] || 0) + 1);
+            const srcCount = {};
+            data.forEach(d => srcCount[d.src] = (srcCount[d.src] || 0) + 1);
             document.getElementById('stat-src').innerHTML = Object.entries(srcCount).map(([n, c]) => `
                 <div class="a-row"><span>${n}</span><span>${Math.round(c / data.length * 100)}%</span></div>
                 <div class="a-bar"><div class="a-fill" style="width:${c / data.length * 100}%; background:var(--accent)"></div></div>
             `).join('');
 
             const richness = Object.keys(speciesCount).length;
-            const shannon = richness > 0 ? (Math.log(richness) * 0.82 + (data.length / richness) * 0.05).toFixed(2) : "0.00";
+            const shannon = richness > 0 ? (Math.log(richness) * 0.82 + (data.length / richness) * 0.05).toFixed(2) : '0.00';
             document.getElementById('c-shannon').innerText = shannon;
 
             const north = data.filter(d => d.lat > 48.5).length;
